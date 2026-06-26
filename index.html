@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>阿里巴巴企业追踪平台</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --orange: #FF6A00; --orange-dim: rgba(255,106,0,0.07);
+      --green: #1D9E75; --red: #E24B4A;
+      --bg: #F7F7F5; --surface: #fff; --surface2: #F2F2F0;
+      --border: rgba(0,0,0,0.08); --border-med: rgba(0,0,0,0.14);
+      --text: #111110; --text2: #6B6B68; --text3: #A0A09C;
+      --r: 10px; --rl: 14px; --mono: 'JetBrains Mono', monospace;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; }
+
+    /* topbar */
+    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+    .topbar-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; height: 56px; display: flex; align-items: center; gap: 14px; }
+    .logo { width: 32px; height: 32px; border-radius: 8px; background: var(--orange); color: #fff; font-weight: 600; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .brand { font-weight: 600; font-size: 15px; }
+    .brand-sub { font-size: 12px; color: var(--text3); margin-left: 6px; }
+    .sb-pill { margin-left: auto; font-size: 12px; color: #1a8a5a; background: #e6f7f0; border: 1px solid #b2e4cf; padding: 3px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+    .sb-pill::before { content:''; width:6px; height:6px; border-radius:50%; background:#1D9E75; }
+
+    /* layout */
+    .main { max-width: 1100px; margin: 0 auto; padding: 24px 24px 60px; }
+
+    /* tabs */
+    .tabs { display: flex; gap: 2px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 3px; margin-bottom: 24px; overflow-x: auto; width: fit-content; }
+    .tab { padding: 7px 14px; border: none; background: transparent; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text2); display: flex; align-items: center; gap: 6px; font-family: inherit; white-space: nowrap; transition: all .15s; }
+    .tab svg { width: 14px; height: 14px; }
+    .tab:hover { color: var(--text); background: rgba(0,0,0,.04); }
+    .tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* cards */
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap: 12px; margin-bottom: 24px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 18px 20px; }
+    .card-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+    .card-val { font-size: 26px; font-weight: 600; line-height: 1; }
+    .card-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+    .card-usd { font-size: 12px; color: var(--text3); margin-top: 3px; font-family: var(--mono); }
+    .card-chg { font-size: 13px; font-weight: 500; margin-top: 6px; }
+    .up { color: var(--green); } .down { color: var(--red); }
+
+    /* bar chart */
+    .sec-hd { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+    .legend { display: flex; gap: 14px; margin-bottom: 10px; }
+    .leg { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
+    .leg-dot { width: 10px; height: 10px; border-radius: 2px; }
+    .bars { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 18px; margin-bottom: 24px; }
+    .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .bar-row:last-child { margin-bottom: 0; }
+    .bar-lbl { width: 38px; font-size: 11px; color: var(--text2); text-align: right; font-family: var(--mono); flex-shrink: 0; }
+    .bar-tracks { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+    .bar-track { height: 15px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 3px; transition: width .7s cubic-bezier(.16,1,.3,1); }
+    .bf-rev { background: var(--orange); opacity: .9; }
+    .bf-net { background: var(--green); opacity: .9; }
+    .bar-num { width: 52px; font-size: 11px; color: var(--text2); font-family: var(--mono); }
+
+    /* table */
+    .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); overflow: hidden; margin-bottom: 24px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 540px; }
+    thead tr { background: var(--surface2); }
+    th { text-align: left; padding: 9px 14px; font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    tr.hl td { background: var(--orange-dim); }
+    .tag { font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 3px; margin-left: 4px; vertical-align: middle; }
+    .tag-img { background: #f0e8fe; color: #7c3aed; }
+    .tag-ai  { background: #fff3e0; color: #b45309; }
+    .latest { font-size: 10px; font-weight: 600; color: var(--orange); background: rgba(255,106,0,.1); padding: 2px 6px; border-radius: 4px; margin-left: 5px; vertical-align: middle; }
+
+    /* status */
+    .status { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 18px; font-size: 13px; color: var(--text2); word-break: break-all; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+    .dot.ok { background: var(--green); }
+    .dot.loading { background: #EF9F27; animation: pulse 1s infinite; }
+    .dot.err { background: var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.35} }
+
+    /* buttons */
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+    .btn { padding: 8px 16px; border: 1px solid var(--border-med); border-radius: var(--r); background: var(--surface); color: var(--text); cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; transition: all .15s; }
+    .btn svg { width: 14px; height: 14px; }
+    .btn:hover { background: var(--surface2); }
+    .btn:active { transform: scale(.98); }
+    .btn-orange { background: var(--orange); color: #fff; border-color: var(--orange); }
+    .btn-orange:hover { background: #e05a00; }
+    .btn-green { background: #1a8a5a; color: #fff; border-color: #1a8a5a; }
+    .btn-green:hover { background: #157a4e; }
+
+    /* inputs */
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
+    .field input { width: 100%; padding: 9px 13px; font-size: 13px; font-family: inherit; border: 1px solid var(--border-med); border-radius: var(--r); background: var(--surface); color: var(--text); outline: none; }
+    .field input:focus { border-color: var(--orange); }
+    .field input::placeholder { color: var(--text3); }
+    .key-saved { font-size: 11px; color: var(--green); margin-top: 4px; display: none; }
+    .key-saved.show { display: block; }
+
+    /* upload */
+    .upload-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 20px; margin-bottom: 18px; }
+    .upload-title { font-size: 13px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+    .drop-zone { border: 2px dashed var(--border-med); border-radius: var(--rl); padding: 28px 20px; text-align: center; cursor: pointer; background: var(--surface2); position: relative; transition: all .2s; }
+    .drop-zone:hover, .drop-zone.over { border-color: var(--orange); background: var(--orange-dim); }
+    .drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .dz-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .dz-sub { font-size: 12px; color: var(--text3); }
+    .dz-hint { font-size: 12px; color: var(--orange); margin-top: 6px; font-weight: 500; }
+    .file-list { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
+    .file-item { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: var(--surface2); border-radius: var(--r); border: 1px solid var(--border); }
+    .file-icon { width: 28px; height: 28px; border-radius: 6px; background: #f0e8fe; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .file-icon svg { width: 14px; height: 14px; color: #7c3aed; }
+    .file-name { flex: 1; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-size { font-size: 11px; color: var(--text3); flex-shrink: 0; }
+    .file-st { font-size: 11px; font-weight: 600; flex-shrink: 0; }
+    .file-st.pending { color: var(--text3); }
+    .file-st.parsing { color: #EF9F27; }
+    .file-st.done { color: var(--green); }
+    .file-st.err { color: var(--red); }
+
+    /* preview */
+    .preview { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); overflow: hidden; margin-top: 14px; }
+    .preview-hd { padding: 10px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 600; color: var(--text2); display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .preview-body { padding: 12px 16px; }
+    .p-row { display: flex; gap: 12px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .p-row:last-child { border-bottom: none; }
+    .p-year { font-weight: 600; width: 64px; flex-shrink: 0; }
+    .p-data { font-size: 13px; color: var(--text2); }
+    .p-data strong { color: var(--text); }
+    .p-note { font-size: 11px; color: var(--text3); flex: 1; }
+
+    /* divider / misc */
+    .divider { height: 1px; background: var(--border); margin: 22px 0; }
+    .info-box { border-left: 3px solid var(--orange); background: var(--surface); border-radius: 0 var(--r) var(--r) 0; padding: 11px 15px; font-size: 13px; color: var(--text2); line-height: 1.8; margin-bottom: 18px; border: 1px solid var(--border); border-left: 3px solid var(--orange); }
+    .info-box strong { color: var(--text); }
+    .badge-green { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: #e6f7f0; color: #1a8a5a; border: 1px solid #b2e4cf; margin-left: 8px; }
+    .db-info { font-size: 13px; color: var(--text2); line-height: 2.4; }
+    .db-info code { background: var(--surface2); border: 1px solid var(--border); padding: 1px 7px; border-radius: 5px; font-family: var(--mono); font-size: 12px; }
+    .last-sync { font-size: 12px; color: var(--text3); margin-bottom: 14px; }
+    .last-sync span { color: var(--green); font-weight: 500; }
+    .stock-big { font-size: 40px; font-weight: 600; font-family: var(--mono); line-height: 1; }
+    .stock-ticker { font-size: 12px; color: var(--text3); margin-bottom: 5px; letter-spacing: .06em; }
+
+    @media (max-width: 640px) {
+      .main { padding: 14px 14px 48px; }
+      .topbar-inner { padding: 0 14px; }
+      .brand-sub { display: none; }
+      .metric-grid { grid-template-columns: 1fr 1fr; }
+      .tabs { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo">阿里</div>
+    <span class="brand">阿里巴巴企业追踪平台</span>
+    <span class="brand-sub">BABA / 9988.HK</span>
+    <span class="sb-pill">Supabase 已连接</span>
+  </div>
+</header>
+
+<main class="main">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('finance')" id="tab-finance">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>财务年报
+    </button>
+    <button class="tab" onclick="switchTab('upload')" id="tab-upload">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>上传截图
+    </button>
+    <button class="tab" onclick="switchTab('database')" id="tab-database">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0018 0V5"/><path d="M3 12a9 3 0 0018 0"/></svg>数据存储
+    </button>
+    <button class="tab" onclick="switchTab('stock')" id="tab-stock">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>实时股价
+    </button>
+  </div>
+
+  <!-- ══ 财务年报 ══ -->
+  <div class="panel active" id="panel-finance">
+    <div class="status"><div class="dot loading" id="fin-dot"></div><span id="fin-status">正在从 Supabase 加载数据...</span></div>
+    <div id="sync-bar" class="last-sync" style="display:none">最后同步：<span id="sync-time"></span></div>
+    <div class="metric-grid">
+      <div class="card">
+        <div class="card-label">营业收入（最新）</div>
+        <div class="card-val" id="m-rev">—</div>
+        <div class="card-sub">人民币 亿元</div>
+        <div class="card-usd" id="m-rev-usd"></div>
+        <div class="card-chg" id="m-rev-chg"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">净利润（最新）</div>
+        <div class="card-val" id="m-net">—</div>
+        <div class="card-sub">人民币 亿元</div>
+        <div class="card-usd" id="m-net-usd"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">净利润率</div>
+        <div class="card-val" id="m-margin">—</div>
+        <div class="card-sub">净利润 / 营业收入</div>
+      </div>
+      <div class="card">
+        <div class="card-label">历年收入增长</div>
+        <div class="card-val up" id="m-growth">—</div>
+        <div class="card-sub" id="m-range">—</div>
+      </div>
+    </div>
+    <div class="sec-hd">收入 vs 净利润趋势</div>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:var(--orange)"></div>营业收入</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>净利润</div>
+    </div>
+    <div class="bars" id="bars"><div style="color:var(--text3);font-size:13px">加载中...</div></div>
+    <div class="sec-hd">
+      历年财务数据
+      <span style="font-size:11px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">
+        <span class="tag tag-img">截图</span> 截图识别 &nbsp;<span class="tag tag-ai">AI</span> AI估算
+      </span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>财年</th><th>营收（亿人民币）</th><th>营收（亿美元）</th><th>净利润（亿人民币）</th><th>净利润（亿美元）</th><th>净利润率</th><th>同比增长</th></tr></thead>
+        <tbody id="fin-tbody"><tr><td colspan="7" style="text-align:center;color:var(--text3);padding:28px">加载中...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ 上传截图 ══ -->
+  <div class="panel" id="panel-upload">
+
+    <!-- API Key -->
+    <div class="upload-box">
+      <div class="upload-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        DeepSeek API Key
+      </div>
+      <div class="field" style="margin-bottom:4px">
+        <input type="password" id="ds-key" placeholder="sk-..." oninput="saveKey(this.value)" />
+      </div>
+      <div class="key-saved" id="key-saved">✓ 已自动保存到本设备</div>
+    </div>
+
+    <!-- Upload -->
+    <div class="upload-box">
+      <div class="upload-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        上传财务报表截图
+      </div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.8">
+        打开年报 PDF → 翻到合并利润表（Consolidated Statements of Operations）→ 截图整个数据表格 → 上传<br>
+        <span style="color:var(--text3)">截图需包含：Year ended March 31 / Revenue / Net income 等行</span>
+      </div>
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" id="img-input" accept="image/*" multiple onchange="handleFiles(this.files)" />
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text3);margin:0 auto 10px;display:block"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <div class="dz-title">点击或拖拽财务报表截图</div>
+        <div class="dz-sub">支持 JPG、PNG、WEBP · 可同时上传多张不同财年</div>
+        <div class="dz-hint">AI 自动识别财年和数字 · 确认后同步到云端</div>
+      </div>
+      <div class="file-list" id="file-list"></div>
+    </div>
+
+    <div class="status"><div class="dot" id="upload-dot"></div><span id="upload-status">请上传财务报表截图</span></div>
+
+    <div id="preview-wrap" style="display:none">
+      <div class="preview">
+        <div class="preview-hd">
+          <span id="preview-title">解析结果预览</span>
+          <button class="btn btn-green" onclick="confirmSync()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg>
+            确认同步到 Supabase
+          </button>
+        </div>
+        <div class="preview-body" id="preview-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 数据存储 ══ -->
+  <div class="panel" id="panel-database">
+    <div class="info-box">已连接 <strong>Supabase</strong> · 表：<strong>alibaba_financials</strong> · 任何设备打开自动读取最新数据</div>
+    <div class="status"><div class="dot" id="db-dot"></div><span id="db-status">就绪</span></div>
+    <div class="btn-row">
+      <button class="btn btn-green" onclick="loadFromSupabase(true)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="21" x2="12" y2="3"/></svg>从 Supabase 读取
+      </button>
+    </div>
+    <div class="sec-hd">云端记录 <span class="badge-green">alibaba_financials</span></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>财年</th><th>营收（亿人民币）</th><th>营收（亿美元）</th><th>净利润（亿人民币）</th><th>净利润（亿美元）</th><th>净利润率</th><th>来源</th><th>更新时间</th></tr></thead>
+        <tbody id="db-tbody"><tr><td colspan="8" style="text-align:center;color:var(--text3);padding:28px">点击读取</td></tr></tbody>
+      </table>
+    </div>
+    <div class="divider"></div>
+    <div class="db-info">
+      <span style="color:var(--text3)">项目 URL</span> &nbsp;<code>aluccagrcxjoubdyquen.supabase.co</code><br>
+      <span style="color:var(--text3)">数据表</span> &nbsp;&nbsp;&nbsp;&nbsp;<code>public.alibaba_financials</code>
+    </div>
+  </div>
+
+  <!-- ══ 实时股价 ══ -->
+  <div class="panel" id="panel-stock">
+    <div class="btn-row">
+      <button class="btn btn-orange" onclick="fetchStock('BABA')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-4.17"/></svg>刷新美股（BABA）
+      </button>
+      <button class="btn" onclick="fetchStock('9988.HK')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-4.17"/></svg>刷新港股（9988.HK）
+      </button>
+    </div>
+    <div class="metric-grid">
+      <div class="card" style="grid-column:span 2">
+        <div class="stock-ticker">BABA · NYSE</div>
+        <div class="stock-big" id="s-price">—</div>
+        <div id="s-chg" style="font-size:15px;font-weight:500;margin-top:6px"></div>
+      </div>
+      <div class="card"><div class="card-label">今日最高</div><div class="card-val" id="s-high" style="font-size:22px">—</div></div>
+      <div class="card"><div class="card-label">今日最低</div><div class="card-val" id="s-low" style="font-size:22px">—</div></div>
+      <div class="card"><div class="card-label">市值</div><div class="card-val" id="s-mkt" style="font-size:22px">—</div></div>
+      <div class="card"><div class="card-label">52周范围</div><div class="card-val" id="s-52w" style="font-size:15px;margin-top:4px">—</div></div>
+    </div>
+    <div class="status"><div class="dot" id="stock-dot"></div><span id="stock-status">等待获取</span></div>
+    <div class="divider"></div>
+    <div class="sec-hd">近期记录</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>时间</th><th>股票</th><th>价格</th><th>涨跌</th><th>涨跌幅</th></tr></thead>
+        <tbody id="stock-tbody"><tr><td colspan="5" style="text-align:center;color:var(--text3);padding:28px">点击刷新获取</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+const SB_URL = 'https://aluccagrcxjoubdyquen.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsdWNjYWdyY3hqb3ViZHlxdWVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzc3MTMsImV4cCI6MjA5NzkxMzcxM30.A-G5qRRb3xeIX8cng44fOsLcLQiawxTtVue0bJZIeW4';
+const HDR = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' };
+const RATE = 7.25;
+
+let currentData = [], pendingData = [], stockHistory = [];
+
+// ── Key ──
+function saveKey(v) {
+  if (!v) return;
+  try { localStorage.setItem('ali_ds_key', v); } catch(e) {}
+  document.getElementById('key-saved').classList.add('show');
+}
+function getKey() {
+  return document.getElementById('ds-key').value.trim();
+}
+function loadKey() {
+  try {
+    const k = localStorage.getItem('ali_ds_key');
+    if (k) { document.getElementById('ds-key').value = k; document.getElementById('key-saved').classList.add('show'); }
+  } catch(e) {}
+}
+
+// ── UI helpers ──
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  document.getElementById('panel-' + id).classList.add('active');
+}
+function setStatus(w, state, msg) {
+  document.getElementById(w + '-dot').className = 'dot ' + state;
+  document.getElementById(w + '-status').textContent = msg;
+}
+function usd(v) { return (v / RATE).toFixed(0); }
+
+// ── Render ──
+function renderAll(rows) {
+  currentData = rows;
+  const sorted = [...rows].sort((a, b) => b.year.localeCompare(a.year));
+  renderMetrics(sorted);
+  renderBars(sorted);
+  renderTable(sorted);
+}
+
+function rev(r) { return Number(r.revenue_cny || r.revenue || 0); }
+function net(r) { return Number(r.net_profit_cny || r.net_profit || 0); }
+
+function renderMetrics(s) {
+  if (!s.length) return;
+  const l = s[0], o = s[s.length - 1], p = s[1];
+  const rv = rev(l), nt = net(l);
+  document.getElementById('m-rev').textContent = rv.toLocaleString();
+  document.getElementById('m-rev-usd').textContent = '≈ $' + usd(rv) + ' 亿美元';
+  document.getElementById('m-net').textContent = nt.toLocaleString();
+  document.getElementById('m-net-usd').textContent = '≈ $' + usd(nt) + ' 亿美元';
+  document.getElementById('m-margin').textContent = rv ? ((nt / rv) * 100).toFixed(1) + '%' : '—';
+  if (p) {
+    const c = (((rv - rev(p)) / rev(p)) * 100).toFixed(1);
+    document.getElementById('m-rev-chg').innerHTML = `<span class="${c >= 0 ? 'up' : 'down'}">${c >= 0 ? '▲' : '▼'} ${Math.abs(c)}% 较上财年</span>`;
+  }
+  const g = rev(o) ? (((rv - rev(o)) / rev(o)) * 100).toFixed(0) : 0;
+  document.getElementById('m-growth').textContent = '+' + Number(g).toLocaleString() + '%';
+  document.getElementById('m-range').textContent = o.year + ' → ' + l.year;
+}
+
+function renderBars(sorted) {
+  const asc = [...sorted].reverse();
+  const mx = Math.max(...asc.map(r => rev(r)));
+  document.getElementById('bars').innerHTML = asc.map(r => {
+    const rv = rev(r), nt = net(r);
+    const val = rv >= 1000 ? (rv / 1000).toFixed(1) + 'k' : rv;
+    return `<div class="bar-row">
+      <div class="bar-lbl">${r.year.replace('FY', '')}</div>
+      <div class="bar-tracks">
+        <div class="bar-track"><div class="bar-fill bf-rev" style="width:${(rv/mx*100).toFixed(1)}%"></div></div>
+        <div class="bar-track"><div class="bar-fill bf-net" style="width:${(nt/mx*100).toFixed(1)}%"></div></div>
+      </div>
+      <div class="bar-num">${val}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTable(sorted) {
+  document.getElementById('fin-tbody').innerHTML = sorted.map((r, i) => {
+    const p = sorted[i + 1];
+    const rv = rev(r), nt = net(r);
+    const margin = rv ? ((nt / rv) * 100).toFixed(1) + '%' : '—';
+    const chg = p && rev(p) ? (((rv - rev(p)) / rev(p)) * 100).toFixed(1) : null;
+    const chgHtml = chg !== null ? `<span class="${chg >= 0 ? 'up' : 'down'}">${chg >= 0 ? '▲' : '▼'} ${Math.abs(chg)}%</span>` : '—';
+    const src = r.data_source === 'img' ? '<span class="tag tag-img">截图</span>' : '<span class="tag tag-ai">AI</span>';
+    return `<tr${i === 0 ? ' class="hl"' : ''}>
+      <td>${r.year}${i === 0 ? '<span class="latest">最新</span>' : ''} ${src}</td>
+      <td>${rv.toLocaleString()}</td><td>≈ ${usd(rv)}</td>
+      <td>${nt.toLocaleString()}</td><td>≈ ${usd(nt)}</td>
+      <td>${margin}</td><td>${chgHtml}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderDbTable(rows) {
+  const sorted = [...rows].sort((a, b) => b.year.localeCompare(a.year));
+  document.getElementById('db-tbody').innerHTML = sorted.map(r => {
+    const rv = rev(r), nt = net(r);
+    const src = r.data_source === 'img' ? '<span class="tag tag-img">截图</span>' : '<span class="tag tag-ai">AI</span>';
+    const ts = r.updated_at ? new Date(r.updated_at).toLocaleString('zh-CN') : '—';
+    return `<tr>
+      <td>${r.year}</td><td>${rv.toLocaleString()}</td><td>≈ ${usd(rv)}</td>
+      <td>${nt.toLocaleString()}</td><td>≈ ${usd(nt)}</td>
+      <td>${rv ? ((nt/rv)*100).toFixed(1)+'%' : '—'}</td>
+      <td>${src}</td><td style="color:var(--text3);font-size:12px">${ts}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Supabase ──
+async function loadFromSupabase(updateDb = false) {
+  setStatus('fin', 'loading', '正在从 Supabase 加载数据...');
+  if (updateDb) setStatus('db', 'loading', '读取中...');
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/alibaba_financials?select=*&order=year.desc`, { headers: HDR });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    if (!rows.length) throw new Error('暂无数据，请上传截图');
+    renderAll(rows);
+    const ts = rows.reduce((a, b) => a.updated_at > b.updated_at ? a : b).updated_at;
+    if (ts) {
+      document.getElementById('sync-bar').style.display = 'block';
+      document.getElementById('sync-time').textContent = new Date(ts).toLocaleString('zh-CN');
+    }
+    if (updateDb) { renderDbTable(rows); setStatus('db', 'ok', `读取成功 · ${rows.length} 条`); }
+    setStatus('fin', 'ok', `已加载 ${rows.length} 条记录`);
+  } catch(e) {
+    setStatus('fin', 'err', '加载失败：' + e.message);
+    if (updateDb) setStatus('db', 'err', '失败：' + e.message);
+  }
+}
+
+async function upsertToSupabase(rows) {
+  const now = new Date().toISOString();
+  const payload = rows.map(r => ({
+    year: r.year,
+    revenue_cny: Number(r.revenue_cny || 0),
+    net_profit_cny: Number(r.net_profit_cny || 0),
+    revenue: Number(r.revenue_cny || 0),
+    net_profit: Number(r.net_profit_cny || 0),
+    data_source: 'img',
+    updated_at: now
+  }));
+  const res = await fetch(`${SB_URL}/rest/v1/alibaba_financials`, {
+    method: 'POST',
+    headers: { ...HDR, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+
+// ── Image upload & parse ──
+const imgFiles = [];
+
+const zone = document.getElementById('drop-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('over'); handleFiles(e.dataTransfer.files); });
+
+function handleFiles(files) {
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) continue;
+    if (imgFiles.find(x => x.name === f.name)) continue;
+    imgFiles.push(f);
+    addFileItem(f);
+  }
+  if (imgFiles.length) processImages();
+}
+
+function addFileItem(f) {
+  const id = 'fi-' + f.name.replace(/\W/g, '_');
+  const div = document.createElement('div');
+  div.className = 'file-item';
+  div.id = id;
+  div.innerHTML = `
+    <div class="file-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+    <div class="file-name">${f.name}</div>
+    <div class="file-size">${(f.size/1024/1024).toFixed(1)} MB</div>
+    <div class="file-st pending" id="st-${id}">待解析</div>`;
+  document.getElementById('file-list').appendChild(div);
+}
+
+function setSt(f, state, txt) {
+  const el = document.getElementById('st-fi-' + f.name.replace(/\W/g, '_'));
+  if (el) { el.className = 'file-st ' + state; el.textContent = txt; }
+}
+
+async function processImages() {
+  const key = getKey();
+  if (!key) { setStatus('upload', 'err', '请先填写 DeepSeek API Key'); return; }
+  pendingData = [];
+  setStatus('upload', 'loading', '正在识别截图...');
+
+  for (const f of imgFiles) {
+    setSt(f, 'parsing', '识别中...');
+    try {
+      const b64 = await toBase64(f);
+      const results = await parseImageWithDeepSeek(key, b64, f.type);
+      if (results && results.length) {
+        pendingData.push(...results);
+        setSt(f, 'done', '✓ ' + results.map(r => r.year).join(', '));
+      } else {
+        setSt(f, 'err', '未识别到数据');
+      }
+    } catch(e) {
+      setSt(f, 'err', e.message.slice(0, 40));
+      setStatus('upload', 'err', '识别失败：' + e.message);
+    }
+  }
+
+  // Deduplicate
+  const map = {};
+  pendingData.forEach(r => { map[r.year] = r; });
+  pendingData = Object.values(map).sort((a, b) => b.year.localeCompare(a.year));
+
+  if (!pendingData.length) {
+    setStatus('upload', 'err', '未能识别到有效数据，请检查截图是否包含财务表格');
+    return;
+  }
+
+  showPreview(pendingData);
+  setStatus('upload', 'ok', `识别完成 · ${pendingData.length} 条财年数据 · 请确认后同步`);
+}
+
+async function parseImageWithDeepSeek(key, b64, mimeType) {
+  const prompt = `你是阿里巴巴财务数据提取专家。请从这张财务报表截图中精确提取数据。
+
+规则：
+1. 财年截止于每年3月31日，"Year ended March 31, 2026" = FY2026
+2. 数字单位通常是 in millions（百万元），换算为亿元需÷100
+3. 只提取：Revenue（营业收入）和 Net income attributable to ordinary shareholders（归属普通股股东净利润）
+4. 截图中有几个财年就提取几个，全部提取
+5. 只用截图中实际出现的数字，禁止估算
+
+换算示例：Revenue 1,023,670（百万）÷ 100 = 10,237 亿元
+
+严格按以下 JSON 格式返回，不要任何其他文字：
+{"results":[{"year":"FY2026","revenue_cny":10237,"net_profit_cny":1059,"note":"Revenue 1,023,670M÷100; NetIncome 105,904M÷100"}]}`;
+
+  const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: `data:${mimeType};base64,${b64}` } }
+        ]
+      }],
+      max_tokens: 2000,
+      temperature: 0
+    })
+  });
+
+  const d = await res.json();
+  if (d.error) throw new Error('DeepSeek: ' + d.error.message);
+  const text = d.choices[0].message.content;
+  const match = text.replace(/```json|```/g, '').trim().match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('未返回 JSON，原始回复：' + text.slice(0, 80));
+  const json = JSON.parse(match[0]);
+  return (json.results || []).filter(r => r.year && Number(r.revenue_cny) > 0);
+}
+
+function toBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function showPreview(data) {
+  document.getElementById('preview-wrap').style.display = 'block';
+  document.getElementById('preview-title').textContent = `解析结果预览 · ${data.length} 条财年数据`;
+  document.getElementById('preview-body').innerHTML = data.map(r =>
+    `<div class="p-row">
+      <div class="p-year">${r.year}</div>
+      <div class="p-data">营收：<strong>${Number(r.revenue_cny).toLocaleString()} 亿元</strong> ≈ $${usd(r.revenue_cny)} 亿</div>
+      <div class="p-data">净利润：<strong>${Number(r.net_profit_cny).toLocaleString()} 亿元</strong> ≈ $${usd(r.net_profit_cny)} 亿</div>
+      <div class="p-note">${r.note || ''}</div>
+    </div>`
+  ).join('');
+}
+
+async function confirmSync() {
+  if (!pendingData.length) return;
+  setStatus('upload', 'loading', '正在同步到 Supabase...');
+  try {
+    await upsertToSupabase(pendingData);
+    setStatus('upload', 'ok', `✓ 同步成功 · ${pendingData.length} 条记录已更新`);
+    await loadFromSupabase();
+    setTimeout(() => switchTab('finance'), 1000);
+  } catch(e) {
+    setStatus('upload', 'err', '同步失败：' + e.message);
+  }
+}
+
+// ── Stock ──
+async function fetchStock(ticker) {
+  setStatus('stock', 'loading', '获取 ' + ticker + '...');
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
+    const res = await fetch('https://api.allorigins.win/get?url=' + encodeURIComponent(url));
+    const meta = JSON.parse((await res.json()).contents).chart.result[0].meta;
+    const price = Number(meta.regularMarketPrice).toFixed(2);
+    const prev = meta.previousClose || meta.chartPreviousClose;
+    const ch = prev ? (price - prev).toFixed(2) : null;
+    const cp = prev ? (((price - prev) / prev) * 100).toFixed(2) : null;
+    document.getElementById('s-price').textContent = '$' + price;
+    document.getElementById('s-high').textContent = '$' + Number(meta.regularMarketDayHigh).toFixed(2);
+    document.getElementById('s-low').textContent = '$' + Number(meta.regularMarketDayLow).toFixed(2);
+    const mc = meta.marketCap;
+    document.getElementById('s-mkt').textContent = mc ? '$' + (mc / 1e9).toFixed(0) + 'B' : '—';
+    document.getElementById('s-52w').textContent = (meta.fiftyTwoWeekLow && meta.fiftyTwoWeekHigh)
+      ? `$${Number(meta.fiftyTwoWeekLow).toFixed(2)} – $${Number(meta.fiftyTwoWeekHigh).toFixed(2)}` : '—';
+    if (ch) {
+      const up = parseFloat(ch) >= 0;
+      document.getElementById('s-chg').innerHTML = `<span class="${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(ch)} (${Math.abs(cp)}%)</span>`;
+    }
+    const now = new Date().toLocaleString('zh-CN');
+    stockHistory.unshift({ time: now, ticker, price: '$' + price, ch: ch ? (parseFloat(ch) >= 0 ? '+' + ch : ch) : '—', cp: cp ? (parseFloat(cp) >= 0 ? '+' + cp + '%' : cp + '%') : '—' });
+    document.getElementById('stock-tbody').innerHTML = stockHistory.slice(0, 10).map(h =>
+      `<tr><td style="color:var(--text3);font-size:12px">${h.time}</td><td>${h.ticker}</td>
+       <td style="font-family:var(--mono)">${h.price}</td>
+       <td class="${parseFloat(h.ch) >= 0 ? 'up' : 'down'}">${h.ch}</td>
+       <td class="${parseFloat(h.cp) >= 0 ? 'up' : 'down'}">${h.cp}</td></tr>`
+    ).join('');
+    setStatus('stock', 'ok', `Yahoo Finance · ${ticker} · ${now}`);
+  } catch(e) {
+    setStatus('stock', 'err', '获取失败，请重试');
+  }
+}
+
+// ── Init ──
+loadKey();
+loadFromSupabase();
+</script>
+</body>
+</html>
